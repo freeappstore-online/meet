@@ -1,3 +1,2 @@
-export interface AppState {
-  // Define your app state here
-}
+// Add your shared types here.
+export {}
