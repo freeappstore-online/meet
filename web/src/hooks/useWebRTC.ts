@@ -43,6 +43,7 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
   const localStreamRef = useRef<MediaStream | null>(null)
   const startingRef = useRef(false)
+  const offerRetryRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   /** Flush any ICE candidates queued before remote description was set. */
   const flushCandidates = useCallback(async () => {
@@ -141,8 +142,18 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
       room.send<SignalMessage>({ type: 'offer', sdp: offer.sdp! })
       setCallState('waiting')
     } else {
-      // Ask the host to (re)send their offer — we may have missed it.
+      // Ask the host to (re)send their offer. Retry every 2s — the host
+      // might still be waiting for getUserMedia when our first request lands.
       room.send<SignalMessage>({ type: 'request-offer' })
+      if (offerRetryRef.current) clearInterval(offerRetryRef.current)
+      offerRetryRef.current = setInterval(() => {
+        if (!room || pcRef.current?.remoteDescription) {
+          if (offerRetryRef.current) clearInterval(offerRetryRef.current)
+          offerRetryRef.current = null
+          return
+        }
+        room.send<SignalMessage>({ type: 'request-offer' })
+      }, 2000)
       setCallState('connecting')
     }
     startingRef.current = false
@@ -157,6 +168,11 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
       ;(async () => {
         try {
           if (data.type === 'offer') {
+            // Stop retrying — we got an offer.
+            if (offerRetryRef.current) {
+              clearInterval(offerRetryRef.current)
+              offerRetryRef.current = null
+            }
             let pc = pcRef.current
             if (!pc || pc.signalingState === 'closed') {
               if (!localStreamRef.current) {
@@ -259,6 +275,10 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
 
   const endCall = useCallback(() => {
     startingRef.current = false
+    if (offerRetryRef.current) {
+      clearInterval(offerRetryRef.current)
+      offerRetryRef.current = null
+    }
     if (pcRef.current) {
       pcRef.current.close()
       pcRef.current = null
@@ -288,9 +308,8 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
   // Cleanup on unmount.
   useEffect(() => {
     return () => {
-      if (pcRef.current) {
-        pcRef.current.close()
-      }
+      if (offerRetryRef.current) clearInterval(offerRetryRef.current)
+      if (pcRef.current) pcRef.current.close()
       if (localStreamRef.current) {
         for (const track of localStreamRef.current.getTracks()) {
           track.stop()
