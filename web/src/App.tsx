@@ -36,14 +36,13 @@ export default function App() {
   // Room state
   const [myRoomId, setMyRoomId] = useState<string | null>(null)
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
-  const [room, setRoom] = useState<Room | null>(null)
   const [roomState, setRoomState] = useState<ConnectionState>('closed')
   const [copied, setCopied] = useState(false)
   const [isHost, setIsHost] = useState(false)
 
   const roomRef = useRef<Room | null>(null)
 
-  // WebRTC
+  // WebRTC — pass room via ref so subscription is immediate (no React state delay)
   const {
     localStream,
     remoteStream,
@@ -55,7 +54,8 @@ export default function App() {
     endCall,
     toggleAudio,
     toggleVideo,
-  } = useWebRTC(room, isHost)
+    setRoom,
+  } = useWebRTC(isHost)
 
   // Initialize auth
   useEffect(() => {
@@ -120,6 +120,8 @@ export default function App() {
     console.log(`[meet] joining room: ${roomName} as ${asHost ? 'HOST' : 'GUEST'}`)
     const r = fas.rooms.join(roomName)
     roomRef.current = r
+
+    // Subscribe IMMEDIATELY — before React re-renders
     setRoom(r)
 
     r.onConnectionState((state) => {
