@@ -115,11 +115,12 @@ export default function App() {
 
   /** Copy the meeting link to clipboard. */
   const copyLink = useCallback(async () => {
-    if (!myRoomId) return
-    await navigator.clipboard.writeText(getMeetingLink(myRoomId))
+    const id = activeRoomId ?? myRoomId
+    if (!id) return
+    await navigator.clipboard.writeText(getMeetingLink(id))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [myRoomId])
+  }, [myRoomId, activeRoomId])
 
   /** Join a signaling room and start the call. */
   const joinRoom = useCallback((roomId: string, asHost: boolean) => {
@@ -235,13 +236,26 @@ export default function App() {
               <h1 className="display-font text-xl font-bold text-[var(--ink)]">Meeting</h1>
               <ConnectionBadge state={roomState} />
             </div>
-            {callState !== 'idle' && (
-              <span className="rounded-full bg-[var(--success)]/15 px-3 py-1 text-xs font-medium text-[var(--success)]">
-                {callState === 'waiting' ? 'Waiting for peer...' :
-                 callState === 'connecting' ? 'Connecting...' :
-                 'Connected'}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {callState !== 'idle' && (
+                <span className="rounded-full bg-[var(--success)]/15 px-3 py-1 text-xs font-medium text-[var(--success)]">
+                  {callState === 'waiting' ? 'Waiting for peer...' :
+                   callState === 'connecting' ? 'Connecting...' :
+                   'Connected'}
+                </span>
+              )}
+              <button
+                onClick={copyLink}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  copied
+                    ? 'border-[var(--success)]/30 bg-[var(--success)]/15 text-[var(--success)]'
+                    : 'border-[var(--line-strong)] bg-[var(--glass)] text-[var(--muted)] hover:text-[var(--ink)]'
+                }`}
+                title={getMeetingLink(activeRoomId)}
+              >
+                {copied ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
           </div>
 
           {/* Video grid */}
