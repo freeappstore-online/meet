@@ -234,6 +234,7 @@ export default function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h1 className="display-font text-xl font-bold text-[var(--ink)]">Meeting</h1>
+              <span className="rounded-lg bg-[var(--glass)] px-2 py-0.5 font-mono text-xs text-[var(--muted)]">{activeRoomId}</span>
               <ConnectionBadge state={roomState} />
             </div>
             <div className="flex items-center gap-2">
