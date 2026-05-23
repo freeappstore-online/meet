@@ -239,9 +239,14 @@ export default function App() {
             </div>
             <div className="flex items-center gap-2">
               {callState !== 'idle' && (
-                <span className="rounded-full bg-[var(--success)]/15 px-3 py-1 text-xs font-medium text-[var(--success)]">
+                <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  callState === 'error'
+                    ? 'bg-[var(--error)]/15 text-[var(--error)]'
+                    : 'bg-[var(--success)]/15 text-[var(--success)]'
+                }`}>
                   {callState === 'waiting' ? 'Waiting for peer...' :
                    callState === 'connecting' ? 'Connecting...' :
+                   callState === 'error' ? 'Camera/mic denied' :
                    'Connected'}
                 </span>
               )}

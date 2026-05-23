@@ -11,7 +11,7 @@ export function VideoTile({ stream, muted = false, label, mirrored = false }: Vi
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    if (videoRef.current && stream) {
+    if (videoRef.current) {
       videoRef.current.srcObject = stream
     }
   }, [stream])

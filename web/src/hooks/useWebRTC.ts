@@ -26,7 +26,7 @@ interface SignalCandidate {
 
 type SignalMessage = SignalOffer | SignalAnswer | SignalCandidate
 
-export type CallState = 'idle' | 'waiting' | 'connecting' | 'connected'
+export type CallState = 'idle' | 'waiting' | 'connecting' | 'connected' | 'error'
 
 export function useWebRTC(room: Room | null, isHost: boolean) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -77,15 +77,8 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'connected') {
         setCallState('connected')
-      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        setCallState('idle')
-      }
-    }
-
-    // Add local tracks to the connection.
-    if (localStreamRef.current) {
-      for (const track of localStreamRef.current.getTracks()) {
-        pc.addTrack(track, localStreamRef.current)
+      } else if (pc.connectionState === 'failed') {
+        setCallState('error')
       }
     }
 
@@ -98,7 +91,13 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
 
     setCallState('waiting')
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    } catch {
+      setCallState('error')
+      return
+    }
     localStreamRef.current = stream
     setLocalStream(stream)
 
@@ -135,9 +134,14 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
             // Guest might not have created a PC yet if they clicked "Join" which calls startCall.
             // If startCall hasn't been called yet, we need to acquire media first.
             if (!localStreamRef.current) {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-              localStreamRef.current = stream
-              setLocalStream(stream)
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                localStreamRef.current = stream
+                setLocalStream(stream)
+              } catch {
+                setCallState('error')
+                return
+              }
             }
             pc = createPeerConnection()
             // Re-add tracks.
