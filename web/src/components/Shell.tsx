@@ -4,7 +4,7 @@ import type { User } from '@freeappstore/sdk'
 interface ShellProps {
   children: ReactNode
   user?: User | null
-  onSignIn?: () => void
+  onSignIn?: (provider: 'github' | 'google') => void
   onSignOut?: () => void
 }
 
@@ -42,12 +42,20 @@ export function Shell({ children, user, onSignIn, onSignOut }: ShellProps) {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={onSignIn}
-                  className="rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-semibold text-[var(--paper)] hover:opacity-90"
-                >
-                  Sign in with GitHub
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => onSignIn?.('github')}
+                    className="rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-semibold text-[var(--paper)] hover:opacity-90"
+                  >
+                    Sign in with GitHub
+                  </button>
+                  <button
+                    onClick={() => onSignIn?.('google')}
+                    className="rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)] hover:border-[var(--line-strong)]"
+                  >
+                    Sign in with Google
+                  </button>
+                </div>
               )}
             </div>
 
@@ -88,12 +96,20 @@ export function Shell({ children, user, onSignIn, onSignOut }: ShellProps) {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={onSignIn}
-                  className="rounded-lg bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-[var(--paper)]"
-                >
-                  Sign in
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onSignIn?.('github')}
+                    className="rounded-lg bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-[var(--paper)]"
+                  >
+                    GitHub
+                  </button>
+                  <button
+                    onClick={() => onSignIn?.('google')}
+                    className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)]"
+                  >
+                    Google
+                  </button>
+                </div>
               )}
             </div>
             {children}

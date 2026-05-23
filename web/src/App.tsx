@@ -199,18 +199,26 @@ export default function App() {
   // Not signed in
   if (!user) {
     return (
-      <Shell user={null} onSignIn={() => fas.auth.signIn()}>
+      <Shell user={null} onSignIn={(p) => fas.auth.signIn(p)}>
         <div className="flex flex-1 flex-col items-center justify-center gap-5">
           <h1 className="display-font text-4xl font-bold text-[var(--ink)]">Meet</h1>
           <p className="max-w-xs text-center text-[var(--muted)]">
             Instant 1-on-1 video meetings. Sign in to create your personal meeting link.
           </p>
-          <button
-            onClick={() => fas.auth.signIn()}
-            className="rounded-full bg-[var(--ink)] px-6 py-2.5 text-sm font-semibold text-[var(--paper)] hover:opacity-90"
-          >
-            Sign in with GitHub
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => fas.auth.signIn('github')}
+              className="rounded-full bg-[var(--ink)] px-6 py-2.5 text-sm font-semibold text-[var(--paper)] hover:opacity-90"
+            >
+              Sign in with GitHub
+            </button>
+            <button
+              onClick={() => fas.auth.signIn('google')}
+              className="rounded-full border border-[var(--line-strong)] bg-[var(--glass)] px-6 py-2.5 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--glass-hover)]"
+            >
+              Sign in with Google
+            </button>
+          </div>
         </div>
       </Shell>
     )
@@ -219,7 +227,7 @@ export default function App() {
   // Active meeting
   if (activeRoomId) {
     return (
-      <Shell user={user} onSignIn={() => fas.auth.signIn()} onSignOut={() => fas.auth.signOut()}>
+      <Shell user={user} onSignIn={(p) => fas.auth.signIn(p)} onSignOut={() => fas.auth.signOut()}>
         <div className="flex flex-1 flex-col gap-4 py-4">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -308,7 +316,7 @@ export default function App() {
   const isJoining = urlRoomId && urlRoomId !== myRoomId
 
   return (
-    <Shell user={user} onSignIn={() => fas.auth.signIn()} onSignOut={() => fas.auth.signOut()}>
+    <Shell user={user} onSignIn={(p) => fas.auth.signIn(p)} onSignOut={() => fas.auth.signOut()}>
       <div className="flex flex-1 flex-col items-center justify-center gap-8 py-8">
         <h1 className="display-font text-4xl font-bold text-[var(--ink)]">Meet</h1>
 
