@@ -29,6 +29,7 @@ export function createRawRoom(
   let ws: WebSocket | null = null
   let connectionState: ConnectionState = 'connecting'
   let closed = false
+  const chunkBuffers = new Map<string, { chunks: string[]; received: number; total: number }>()
 
   function setState(s: ConnectionState) {
     if (connectionState === s) return
@@ -58,8 +59,31 @@ export function createRawRoom(
       try {
         const parsed = JSON.parse(raw)
         if (parsed.kind === 'msg') {
-          log(`raw-room: msg from=${parsed.from?.login} type=${parsed.data?.type} listeners=${listeners.size}`)
-          const msg: RoomMessage = { from: parsed.from, data: parsed.data, at: parsed.at }
+          let data = parsed.data
+          // Reassemble chunked messages
+          if (data?.type === '_chunk') {
+            const { id, idx, total, chunk } = data as { id: string; idx: number; total: number; chunk: string }
+            let buf = chunkBuffers.get(id)
+            if (!buf) {
+              buf = { chunks: new Array(total).fill(''), received: 0, total }
+              chunkBuffers.set(id, buf)
+            }
+            buf.chunks[idx] = chunk
+            buf.received++
+            log(`raw-room: chunk ${idx + 1}/${total} for ${id}`)
+            if (buf.received < total) return
+            // All chunks received — reassemble
+            chunkBuffers.delete(id)
+            try {
+              data = JSON.parse(buf.chunks.join(''))
+              log(`raw-room: reassembled ${id} → type=${data?.type}`)
+            } catch (e) {
+              log(`raw-room: chunk reassembly failed: ${e}`)
+              return
+            }
+          }
+          log(`raw-room: msg from=${parsed.from?.login} type=${data?.type} listeners=${listeners.size}`)
+          const msg: RoomMessage = { from: parsed.from, data, at: parsed.at }
           for (const l of listeners) {
             l(msg)
           }
@@ -101,8 +125,21 @@ export function createRawRoom(
         return
       }
       const payload = JSON.stringify({ kind: 'msg', data })
-      log(`raw-room: send type=${(data as any)?.type}`)
-      ws.send(payload)
+      if (payload.length <= 3800) {
+        log(`raw-room: send type=${(data as any)?.type} (${payload.length}B)`)
+        ws.send(payload)
+      } else {
+        // Split into chunks to stay under 4KB limit
+        const full = JSON.stringify(data)
+        const chunkSize = 3000
+        const totalChunks = Math.ceil(full.length / chunkSize)
+        const id = Math.random().toString(36).slice(2, 8)
+        log(`raw-room: send type=${(data as any)?.type} CHUNKED (${full.length}B → ${totalChunks} chunks)`)
+        for (let i = 0; i < totalChunks; i++) {
+          const chunk = full.slice(i * chunkSize, (i + 1) * chunkSize)
+          ws.send(JSON.stringify({ kind: 'msg', data: { type: '_chunk', id, idx: i, total: totalChunks, chunk } }))
+        }
+      }
     },
 
     onMessage<T>(listener: (msg: RoomMessage<T>) => void): Unsubscribe {

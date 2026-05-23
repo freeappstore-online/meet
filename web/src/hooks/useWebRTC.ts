@@ -349,5 +349,6 @@ export function useWebRTC(isHost: boolean) {
     toggleAudio,
     toggleVideo,
     setRoom,
+    log,
   }
 }
