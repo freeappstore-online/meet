@@ -10,6 +10,6 @@
     "build": "pnpm --filter @meet/web build",
     "preview": "pnpm --filter @meet/web preview",
     "typecheck": "pnpm --filter @meet/web exec tsc -b",
-    "test": "pnpm --filter @meet/web exec tsc -b"
+    "test": "pnpm --filter @meet/web exec tsc -b && pnpm --filter @meet/web test"
   }
 }

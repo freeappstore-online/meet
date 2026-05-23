@@ -26,7 +26,7 @@ interface SignalCandidate {
 
 type SignalMessage = SignalOffer | SignalAnswer | SignalCandidate
 
-export type CallState = 'idle' | 'waiting' | 'connecting' | 'connected' | 'error'
+export type CallState = 'idle' | 'waiting' | 'connecting' | 'connected' | 'error' | 'peer-left'
 
 export function useWebRTC(room: Room | null, isHost: boolean) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -80,6 +80,13 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
         setCallState('connected')
       } else if (pc.connectionState === 'failed') {
         setCallState('error')
+      } else if (pc.connectionState === 'disconnected') {
+        // Peer may have left — wait briefly then check if it's permanent.
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected') {
+            setCallState('peer-left')
+          }
+        }, 3000)
       }
     }
 
@@ -256,6 +263,14 @@ export function useWebRTC(room: Room | null, isHost: boolean) {
     setAudioEnabled(true)
     setVideoEnabled(true)
   }, [])
+
+  // Warn before closing tab during active call.
+  useEffect(() => {
+    if (callState !== 'connected' && callState !== 'waiting' && callState !== 'connecting') return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [callState])
 
   // Cleanup on unmount.
   useEffect(() => {

@@ -223,13 +223,16 @@ export default function App() {
             <div className="flex items-center gap-2">
               {callState !== 'idle' && (
                 <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  callState === 'error'
+                  callState === 'error' || callState === 'peer-left'
                     ? 'bg-[var(--error)]/15 text-[var(--error)]'
-                    : 'bg-[var(--success)]/15 text-[var(--success)]'
+                    : callState === 'connected'
+                    ? 'bg-[var(--success)]/15 text-[var(--success)]'
+                    : 'bg-[var(--warning)]/15 text-[var(--warning)]'
                 }`}>
                   {callState === 'waiting' ? 'Waiting for peer...' :
                    callState === 'connecting' ? 'Connecting...' :
-                   callState === 'error' ? 'Camera/mic denied' :
+                   callState === 'error' ? 'Camera/mic error' :
+                   callState === 'peer-left' ? 'Peer disconnected' :
                    'Connected'}
                 </span>
               )}
@@ -247,6 +250,24 @@ export default function App() {
             </div>
           </div>
 
+          {/* Error / peer-left banner */}
+          {callState === 'error' && (
+            <div className="flex items-center justify-between rounded-xl border border-[var(--error)]/30 bg-[var(--error)]/10 px-4 py-3">
+              <span className="text-sm text-[var(--error)]">Could not access camera or microphone. Check browser permissions.</span>
+              <button
+                onClick={startCall}
+                className="shrink-0 rounded-lg bg-[var(--error)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {callState === 'peer-left' && (
+            <div className="flex items-center justify-center rounded-xl border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-4 py-3">
+              <span className="text-sm text-[var(--warning)]">The other person disconnected. They can rejoin using the same link.</span>
+            </div>
+          )}
+
           {/* Video grid */}
           <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
             <VideoTile
@@ -257,7 +278,7 @@ export default function App() {
             />
             <VideoTile
               stream={remoteStream}
-              label="Peer"
+              label={callState === 'peer-left' ? 'Disconnected' : 'Peer'}
             />
           </div>
 
