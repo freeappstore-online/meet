@@ -7,6 +7,8 @@ import type { RoomMessage, RoomPeer, ConnectionState } from '@freeappstore/sdk'
 
 type Unsubscribe = () => void
 
+const API_BASE = 'https://api.freeappstore.online'
+
 export interface RawRoom {
   readonly state: ConnectionState
   send<T>(data: T): void
@@ -38,12 +40,38 @@ export function createRawRoom(
     for (const l of stateListeners) l(s)
   }
 
-  function connect() {
+  function scheduleReconnect() {
+    setTimeout(() => { if (!closed) connect() }, 2000)
+  }
+
+  async function connect() {
     if (closed) return
-    const url = new URL(`/v1/apps/${appId}/rooms/${roomId}`, 'wss://api.freeappstore.online')
-    url.searchParams.set('token', token)
-    log(`raw-room: connecting to ${url.pathname}`)
     setState('connecting')
+    const path = `/v1/apps/${encodeURIComponent(appId)}/rooms/${encodeURIComponent(roomId)}`
+
+    // Exchange the session token (header auth, kept off the URL) for a
+    // short-lived room ticket; only the ticket goes in the WebSocket URL.
+    let ticket: string
+    try {
+      const res = await fetch(new URL(`${path}/ticket`, API_BASE), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error(`ticket request failed (${res.status})`)
+      ticket = ((await res.json()) as { ticket: string }).ticket
+    } catch (e) {
+      log(`raw-room: ${e}`)
+      if (closed) return
+      setState('error')
+      scheduleReconnect()
+      return
+    }
+    if (closed) return
+
+    const url = new URL(path, API_BASE)
+    url.protocol = 'wss:'
+    url.searchParams.set('ticket', ticket)
+    log(`raw-room: connecting to ${url.pathname}`)
 
     const socket = new WebSocket(url.toString())
     ws = socket
@@ -104,7 +132,7 @@ export function createRawRoom(
       ws = null
       if (!closed) {
         setState('closed')
-        setTimeout(() => { if (!closed) connect() }, 2000)
+        scheduleReconnect()
       }
     })
 
@@ -114,7 +142,7 @@ export function createRawRoom(
     })
   }
 
-  connect()
+  void connect()
 
   const room: RawRoom = {
     get state() { return connectionState },
